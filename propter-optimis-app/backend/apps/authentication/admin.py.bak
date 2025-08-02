@@ -1,0 +1,104 @@
+"""
+Authentication admin configuration for Propter-Optimis Sports Analytics Platform.
+"""
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.translation import gettext_lazy as _
+
+from .models import User, UserProfile
+from apps.core.admin import TimestampedModelAdmin
+
+
+class UserProfileInline(admin.StackedInline):
+    """Inline admin for user profile."""
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+    fields = [
+        'avatar_url', 'phone_number', 'timezone',
+        'subscription_tier', 'notification_preferences'
+    ]
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    """Admin configuration for User model."""
+    
+    inlines = [UserProfileInline]
+    
+    list_display = [
+        'email', 'team_name', 'is_active', 'is_staff', 
+        'referral_source', 'created_at'
+    ]
+    list_filter = [
+        'is_active', 'is_staff', 'is_superuser', 
+        'referral_source', 'created_at'
+    ]
+    search_fields = ['email', 'team_name']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        (None, {'fields': ('email', 'password_hash')}),
+        (_('Personal info'), {'fields': ('team_name', 'referral_source')}),
+        (_('Permissions'), {
+            'fields': ('is_active', 'is_staff', 'is_superuser'),
+        }),
+        (_('Important dates'), {'fields': ('created_at',)}),
+    )
+    
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'password1', 'password2', 'team_name'),
+        }),
+    )
+    
+    readonly_fields = ['created_at']
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """Override to handle password field properly."""
+        form = super().get_form(request, obj, **kwargs)
+        
+        # If editing existing user, don't require password
+        if obj:
+            if 'password_hash' in form.base_fields:
+                form.base_fields['password_hash'].required = False
+                form.base_fields['password_hash'].help_text = (
+                    'Raw passwords are not stored, so there is no way to see '
+                    'this user\'s password, but you can change the password '
+                    'using <a href="../password/">this form</a>.'
+                )
+        
+        return form
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(TimestampedModelAdmin):
+    """Admin configuration for UserProfile model."""
+    
+    list_display = [
+        'user', 'subscription_tier', 'timezone', 
+        'phone_number', 'created_at'
+    ]
+    list_filter = ['subscription_tier', 'timezone', 'created_at']
+    search_fields = ['user__email', 'user__team_name', 'phone_number']
+    raw_id_fields = ['user']
+    
+    fieldsets = (
+        ('User Information', {
+            'fields': ('user',)
+        }),
+        ('Profile Details', {
+            'fields': (
+                'avatar_url', 'phone_number', 'timezone', 'subscription_tier'
+            )
+        }),
+        ('Preferences', {
+            'fields': ('notification_preferences',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )

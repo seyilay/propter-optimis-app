@@ -1,0 +1,168 @@
+# Propter-Optimis Sports Analytics Platform - Docker Compose
+# Professional sports analytics platform containerization
+
+version: '3.8'
+
+services:
+  # Django Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: propter-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/propter_optimis
+      - REDIS_URL=redis://redis:6379/0
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - OPENSTAR_LAB_API_KEY=${OPENSTAR_LAB_API_KEY}
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+    depends_on:
+      - db
+      - redis
+    networks:
+      - propter-network
+    restart: unless-stopped
+
+  # React Frontend Service (Development)
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.dev
+    container_name: propter-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+    networks:
+      - propter-network
+    restart: unless-stopped
+
+  # PostgreSQL Database (Development)
+  db:
+    image: postgres:15-alpine
+    container_name: propter-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=propter_optimis
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - propter-network
+    restart: unless-stopped
+
+  # Redis for Celery and Caching
+  redis:
+    image: redis:7-alpine
+    container_name: propter-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - propter-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Celery Worker for Background Tasks
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: propter-celery-worker
+    command: celery -A config worker -l info
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/propter_optimis
+      - REDIS_URL=redis://redis:6379/0
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - OPENSTAR_LAB_API_KEY=${OPENSTAR_LAB_API_KEY}
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+    depends_on:
+      - db
+      - redis
+    networks:
+      - propter-network
+    restart: unless-stopped
+
+  # Celery Beat for Scheduled Tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: propter-celery-beat
+    command: celery -A config beat -l info
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/propter_optimis
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    networks:
+      - propter-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: propter-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/var/www/static
+      - media_volume:/var/www/media
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - propter-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  media_volume:
+    driver: local
+  static_volume:
+    driver: local
+
+networks:
+  propter-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
