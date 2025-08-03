@@ -22,6 +22,9 @@ urllib3==2.0.7
 # Environment
 python-decouple==3.8
 
+# Supabase
+supabase==2.3.4
+
 # Validation
 marshmallow==3.20.1
 

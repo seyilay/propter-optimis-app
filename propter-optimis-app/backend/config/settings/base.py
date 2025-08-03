@@ -84,7 +84,7 @@ DATABASES = {
         'HOST': config('DB_HOST', default='localhost'), #db.mtvbmretdspshoflmkzm.supabase.co
         'PORT': config('DB_PORT', default='5432'),
         'OPTIONS': {
-            #'sslmode': 'require',
+            'sslmode': 'require',
         },
     }
 }

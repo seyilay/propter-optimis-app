@@ -10,6 +10,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework.response import Response
 from rest_framework import status
+from supabase import create_client, Client
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ def generate_unique_filename(original_filename: str, prefix: str = '') -> str:
 def validate_file_size(file, max_size: int = None) -> bool:
     """Validate file size against maximum allowed size."""
     if max_size is None:
-        max_size = settings.MAX_FILE_SIZE
+        max_size = getattr(settings, 'MAX_FILE_SIZE', 2147483648)  # 2GB default
     
     if file.size > max_size:
         return False
@@ -123,19 +124,30 @@ class SupabaseStorageClient:
         self.bucket_name = 'propter-optimis-videos'
         self.supabase_url = settings.SUPABASE_URL
         self.service_role_key = settings.SUPABASE_SERVICE_ROLE_KEY
+        self.client: Client = create_client(self.supabase_url, self.service_role_key)
     
     def upload_file(self, file, file_path: str) -> Dict[str, Any]:
         """Upload file to Supabase Storage."""
         try:
-            # This would integrate with Supabase Storage API
-            # For now, we'll simulate the upload
             logger.info(f"Uploading file to Supabase Storage: {file_path}")
             
-            # Simulate successful upload
+            # Reset file pointer to beginning
+            file.seek(0)
+            
+            # Upload to Supabase Storage
+            response = self.client.storage.from_(self.bucket_name).upload(
+                file=file,
+                path=file_path,
+                file_options={"cache-control": "3600", "upsert": "false"}
+            )
+            
+            # Generate public URL
+            public_url = f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{file_path}"
+            
             return {
                 'success': True,
                 'file_path': file_path,
-                'public_url': f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{file_path}",
+                'public_url': public_url,
                 'file_size': file.size
             }
             
@@ -150,7 +162,8 @@ class SupabaseStorageClient:
         """Delete file from Supabase Storage."""
         try:
             logger.info(f"Deleting file from Supabase Storage: {file_path}")
-            # Implement actual deletion logic
+            
+            response = self.client.storage.from_(self.bucket_name).remove([file_path])
             return True
             
         except Exception as e:
