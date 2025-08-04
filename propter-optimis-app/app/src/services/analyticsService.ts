@@ -52,7 +52,7 @@ export class AnalyticsService {
           videos (
             id,
             title,
-            file_path
+            s3_url
           )
         `)
         .order('created_at', { ascending: false });
@@ -83,7 +83,7 @@ export class AnalyticsService {
           videos (
             id,
             title,
-            file_path,
+            s3_url,
             duration
           )
         `)
