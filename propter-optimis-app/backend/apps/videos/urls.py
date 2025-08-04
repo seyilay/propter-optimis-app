@@ -7,7 +7,7 @@ from . import views
 urlpatterns = [
     # Video CRUD operations
     path('', views.VideoListCreateView.as_view(), name='video_list_create'),
-    path('upload/', views.simple_upload_video, name='upload_video'),
+    path('simple-upload/', views.simple_upload_video, name='simple_upload_video'),
     path('<uuid:pk>/', views.VideoDetailView.as_view(), name='video_detail'),
     
     # Upload operations

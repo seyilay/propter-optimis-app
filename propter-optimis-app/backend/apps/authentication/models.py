@@ -48,6 +48,7 @@ class User(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255, db_column='password_hash')  # Maps to Supabase password_hash
+    last_login = models.DateTimeField(blank=True, null=True)  # Required by AbstractBaseUser
     team_name = models.CharField(max_length=255, blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True, null=True)
     role = models.CharField(
@@ -99,10 +100,9 @@ class User(AbstractBaseUser):
         """Return True if user has permissions to view the app."""
         return self.is_superuser
     
-    @property
-    def full_name(self):
+    def get_full_name(self):
         """Return the user's full name."""
-        return self.team_name or self.email
+        return self.full_name or self.team_name or self.email
     
     @property
     def short_name(self):
