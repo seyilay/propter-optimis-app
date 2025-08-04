@@ -31,19 +31,17 @@ class Analysis(models.Model):
     openstarlab_results = models.JSONField(blank=True, null=True)
     ai_insights = models.JSONField(blank=True, null=True)
     status = models.CharField(
-        max_length=20, 
+        max_length=50, 
         choices=AnalysisStatus.choices, 
         default=AnalysisStatus.PENDING
     )
     processing_time = models.IntegerField(blank=True, null=True)  # Time in seconds
-    created_at = models.DateTimeField(default=timezone.now)
-    
-    # Additional fields not in Supabase
+    progress_percentage = models.IntegerField(default=0)  # 0-100 percentage
+    current_step = models.CharField(max_length=100, blank=True, null=True)
     started_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
     error_message = models.TextField(blank=True, null=True)
-    progress_percentage = models.IntegerField(default=0)
-    current_step = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
     
     class Meta:
         db_table = 'analyses'  # Map to existing Supabase table

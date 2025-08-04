@@ -29,27 +29,37 @@ class Video(models.Model):
         related_name='videos',
         db_column='user_id'  # Map to Supabase column name
     )
-    filename = models.CharField(max_length=255)
-    s3_url = models.TextField(blank=True, null=True)  # URL to file in Supabase Storage
-    duration = models.IntegerField(blank=True, null=True)  # Duration in seconds
+    filename = models.CharField(max_length=500)
+    title = models.CharField(max_length=255, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    s3_url = models.TextField(blank=True, null=True)
+    duration = models.IntegerField(blank=True, null=True)
     status = models.CharField(
-        max_length=20, 
+        max_length=50, 
         choices=VideoStatus.choices, 
         default=VideoStatus.UPLOADED
     )
     analysis_intent = models.CharField(
-        max_length=50,
+        max_length=100,
         choices=AnalysisIntent.choices,
         blank=True,
         null=True
     )
-    created_at = models.DateTimeField(default=timezone.now)
-    
-    # Additional metadata not in Supabase
-    file_size = models.BigIntegerField(blank=True, null=True)  # File size in bytes
+    upload_progress = models.IntegerField(default=0)  # 0-100 percentage
+    processing_priority = models.CharField(
+        max_length=20,
+        choices=[
+            ('low', 'Low'),
+            ('standard', 'Standard'),
+            ('high', 'High'),
+            ('enterprise', 'Enterprise')
+        ],
+        default='standard'
+    )
+    file_size = models.BigIntegerField(blank=True, null=True)
     content_type = models.CharField(max_length=100, blank=True, null=True)
-    upload_progress = models.IntegerField(default=0)  # Upload progress percentage
     error_message = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
     
     class Meta:
         db_table = 'videos'  # Map to existing Supabase table
@@ -68,7 +78,24 @@ class Video(models.Model):
     @property
     def can_analyze(self):
         """Check if video can be analyzed."""
-        return self.status == VideoStatus.READY and self.analysis_intent
+        return (self.upload_progress == 100 and 
+                self.status == VideoStatus.READY and 
+                self.analysis_intent)
+    
+    def calculate_processing_priority(self):
+        """Calculate processing priority based on user tier and intent."""
+        if self.user.subscription_tier == 'enterprise':
+            return 'enterprise'
+        elif self.analysis_intent == 'opposition_scouting':
+            return 'high'
+        elif self.user.subscription_tier == 'pro':
+            return 'high'
+        return 'standard'
+    
+    def update_processing_priority(self):
+        """Update processing priority and save."""
+        self.processing_priority = self.calculate_processing_priority()
+        self.save(update_fields=['processing_priority'])
     
     @property
     def formatted_duration(self):

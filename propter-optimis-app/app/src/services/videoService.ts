@@ -43,7 +43,7 @@ export class VideoService {
       // Add progress tracking
       onProgress?.({ progress: 30, status: 'uploading', message: 'Uploading to server...' });
 
-      const response = await fetch(`${API_BASE_URL}/api/videos/upload/`, {
+      const response = await fetch(`${API_BASE_URL}/api/videos/simple-upload/`, {
         method: 'POST',
         body: formData,
         // Don't set Content-Type header - let browser set it with boundary for FormData
@@ -121,14 +121,17 @@ export class VideoService {
       const { data: videoData, error: dbError } = await supabase
         .from('videos')
         .insert({
+          filename: file.name,
           title: metadata.title,
           description: metadata.description,
-          file_path: uploadData.path,
+          s3_url: uploadData.path,
           file_size: file.size,
-          uploaded_by: user.id,
+          content_type: file.type,
+          user_id: user.id,
           status: 'processing',
           analysis_intent: metadata.analysisIntent,
-          upload_date: new Date().toISOString()
+          upload_progress: 100,
+          processing_priority: 'standard'
         })
         .select()
         .single();
@@ -160,7 +163,7 @@ export class VideoService {
       const { data, error } = await supabase
         .from('videos')
         .select('*')
-        .order('upload_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         throw new Error(error.message);
@@ -217,7 +220,7 @@ export class VideoService {
         // Delete from storage
         const { error: storageError } = await supabase.storage
           .from('propter-optimis-videos')
-          .remove([video.file_path]);
+          .remove([video.s3_url]);
 
         if (storageError) {
           console.warn('Error deleting file from storage:', storageError);

@@ -1,36 +1,45 @@
 export interface User {
   id: string;
   email: string;
+  team_name?: string;
   full_name?: string;
   role: 'admin' | 'analyst' | 'coach';
-  team_name?: string;
+  subscription_tier: 'free' | 'pro' | 'enterprise';
+  referral_source?: string;  
   created_at: string;
 }
 
 export interface Video {
   id: string;
-  title: string;
+  user_id: string;
+  filename: string;
+  title?: string;
   description?: string;
-  file_path: string;
-  file_size: number;
+  s3_url?: string;
   duration?: number;
-  upload_date: string;
-  uploaded_by: string;
-  status: 'uploading' | 'processing' | 'completed' | 'failed';
-  analysis_intent: AnalysisIntent;
+  status: 'uploaded' | 'processing' | 'ready' | 'error';
+  analysis_intent?: AnalysisIntent;
+  upload_progress: number;  // 0-100 percentage
+  processing_priority: 'low' | 'standard' | 'high' | 'enterprise';
+  file_size?: number;
+  content_type?: string;
+  error_message?: string;
+  created_at: string;
 }
 
 export interface Analysis {
   id: string;
   video_id: string;
-  analysis_intent: AnalysisIntent;
   openstarlab_results?: OpenStarLabResults;
   ai_insights?: AIInsights;
-  manual_annotations?: any;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
   processing_time?: number;
+  progress_percentage: number;  // 0-100 percentage
+  current_step?: string;
+  started_at?: string;
+  completed_at?: string;
+  error_message?: string;
   created_at: string;
-  updated_at: string;
 }
 
 // OpenStarLab Intelligence Types
@@ -360,11 +369,11 @@ export interface Export {
 }
 
 export type AnalysisIntent = 
-  | 'individual_player_performance'
-  | 'tactical_phase_analysis'
+  | 'individual_player'
+  | 'tactical_phase'
   | 'opposition_scouting'
-  | 'set_piece_analysis'
-  | 'full_match_review';
+  | 'set_piece'
+  | 'full_match';
 
 export interface AnalysisIntentConfig {
   value: AnalysisIntent;

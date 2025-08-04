@@ -47,9 +47,20 @@ class User(AbstractBaseUser):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
-    password_hash = models.CharField(max_length=255)  # Maps to Supabase password_hash
+    password = models.CharField(max_length=255, db_column='password_hash')  # Maps to Supabase password_hash
     team_name = models.CharField(max_length=255, blank=True, null=True)
-    referral_source = models.CharField(max_length=255, blank=True, null=True)
+    full_name = models.CharField(max_length=255, blank=True, null=True)
+    role = models.CharField(
+        max_length=20, 
+        choices=[('admin', 'Admin'), ('analyst', 'Analyst'), ('coach', 'Coach')],
+        default='analyst'
+    )
+    subscription_tier = models.CharField(
+        max_length=20,
+        choices=[('free', 'Free'), ('pro', 'Pro'), ('enterprise', 'Enterprise')],
+        default='free'
+    )
+    referral_source = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     
     # Additional fields for Django admin
@@ -71,14 +82,14 @@ class User(AbstractBaseUser):
         return self.email
     
     def set_password(self, raw_password):
-        """Override to store in password_hash field."""
+        """Set password using Django's standard method."""
         from django.contrib.auth.hashers import make_password
-        self.password_hash = make_password(raw_password)
+        self.password = make_password(raw_password)
     
     def check_password(self, raw_password):
-        """Override to check against password_hash field."""
+        """Check password using Django's standard method."""
         from django.contrib.auth.hashers import check_password
-        return check_password(raw_password, self.password_hash)
+        return check_password(raw_password, self.password)
     
     def has_perm(self, perm, obj=None):
         """Return True if user has the specified permission."""

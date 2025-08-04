@@ -14,9 +14,8 @@ export class AnalyticsService {
         .from('analyses')
         .insert({
           video_id: videoId,
-          analysis_intent: analysisIntent,
           status: 'pending',
-          created_at: new Date().toISOString()
+          progress_percentage: 0
         })
         .select()
         .single();
@@ -39,7 +38,7 @@ export class AnalyticsService {
 
   static async getAnalyses(): Promise<Analysis[]> {
     if (IS_LOCAL_MODE) {
-      const response = await fetch(`${API_BASE_URL}/api/analytics/analyses/`);
+      const response = await fetch(`${API_BASE_URL}/api/analytics/`);
       if (!response.ok) {
         throw new Error(`Failed to fetch analyses: ${response.status}`);
       }
