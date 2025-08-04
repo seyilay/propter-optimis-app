@@ -29,7 +29,10 @@ from apps.core.utils import (
     create_error_response, 
     create_success_response, 
     storage_client,
-    generate_unique_filename
+    generate_unique_filename,
+    validate_file_size,
+    validate_file_type,
+    sanitize_filename
 )
 from apps.core.models import VideoStatus, AnalysisIntent
 
@@ -423,6 +426,8 @@ def simple_upload_video(request):
             video = Video.objects.create(
                 user=user,  # Use authenticated user
                 filename=file.name,
+                title=title,
+                description=description,
                 file_size=file.size,
                 content_type=file.content_type,
                 status=VideoStatus.UPLOADED,

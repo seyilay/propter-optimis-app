@@ -48,7 +48,7 @@ class User(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255, db_column='password_hash')  # Maps to Supabase password_hash
-    last_login = models.DateTimeField(blank=True, null=True)  # Required by AbstractBaseUser
+    last_login = models.DateTimeField(blank=True, null=True, db_column='last_login')  # Required by AbstractBaseUser
     team_name = models.CharField(max_length=255, blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True, null=True)
     role = models.CharField(
