@@ -48,18 +48,16 @@ class VideoListCreateView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         """Get videos for current user."""
-        if settings.DEBUG and not self.request.user.is_authenticated:
-            # Local development fallback
-            from apps.authentication.models import User
-            try:
-                test_user = User.objects.get(email='test@example.com')
-                return Video.objects.filter(user=test_user).select_related(
-                    'metadata', 'upload_session'
-                )
-            except User.DoesNotExist:
-                return Video.objects.none()
+        if settings.DEBUG:
+            # Local development - show all videos for test user
+            test_user_id = "550e8400-e29b-41d4-a716-446655440000"
+            return Video.objects.filter(user_id=test_user_id).select_related(
+                'metadata', 'upload_session'
+            )
         else:
-            return Video.objects.filter(user=self.request.user).select_related(
+            # Production - TODO: Extract user_id from Supabase token
+            user_id = "550e8400-e29b-41d4-a716-446655440000"  # Placeholder
+            return Video.objects.filter(user_id=user_id).select_related(
                 'metadata', 'upload_session'
             )
     
@@ -391,19 +389,14 @@ def simple_upload_video(request):
                 status.HTTP_400_BAD_REQUEST
             )
         
-        # Use authenticated user or create test user for local development
-        if settings.DEBUG and not request.user.is_authenticated:
-            # Local development fallback
-            from apps.authentication.models import User
-            user, created = User.objects.get_or_create(
-                email='test@example.com',
-                defaults={'team_name': 'Test Team'}
-            )
-            if created:
-                user.set_password('testpass')
-                user.save()
+        # Get user ID from Supabase token or use test ID for local development
+        if settings.DEBUG:
+            # Local development - use test user ID
+            user_id = "550e8400-e29b-41d4-a716-446655440000"  # Fixed test UUID
         else:
-            user = request.user
+            # Production - extract from Supabase JWT token
+            # TODO: Implement proper token validation
+            user_id = "550e8400-e29b-41d4-a716-446655440000"  # Placeholder
         
         # Validate file
         if not validate_file_size(file):
@@ -424,7 +417,7 @@ def simple_upload_video(request):
         with transaction.atomic():
             # Create video record
             video = Video.objects.create(
-                user=user,  # Use authenticated user
+                user_id=user_id,  # Direct Supabase user ID
                 filename=file.name,
                 title=title,
                 description=description,
@@ -442,7 +435,7 @@ def simple_upload_video(request):
                 # Upload to Supabase Storage
                 storage_filename = generate_unique_filename(
                     file.name, 
-                    f"videos/{user.id}/"
+                    f"videos/{user_id}/"
                 )
                 
                 upload_result = storage_client.upload_file(file, storage_filename)
@@ -466,7 +459,7 @@ def simple_upload_video(request):
                     )
             else:
                 # Save to local storage
-                upload_dir = f'media/uploads/videos/{user.id}'
+                upload_dir = f'media/uploads/videos/{user_id}'
                 os.makedirs(upload_dir, exist_ok=True)
                 
                 safe_filename = sanitize_filename(file.name)
@@ -476,7 +469,7 @@ def simple_upload_video(request):
                     for chunk in file.chunks():
                         destination.write(chunk)
                 
-                video.s3_url = f'/media/uploads/videos/{user.id}/{safe_filename}'
+                video.s3_url = f'/media/uploads/videos/{user_id}/{safe_filename}'
                 video.status = VideoStatus.PROCESSING
                 video.upload_progress = 100
                 video.save()

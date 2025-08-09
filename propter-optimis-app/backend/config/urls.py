@@ -28,8 +28,7 @@ urlpatterns = [
     # Health check
     path('health/', health_check, name='health_check'),
     
-    # API v1
-    path('api/auth/', include('apps.authentication.urls')),
+    # API v1 - Authentication handled by Supabase
     path('api/videos/', include('apps.videos.urls')),
     path('api/analytics/', include('apps.analytics.urls')),
     path('api/exports/', include('apps.exports.urls')),

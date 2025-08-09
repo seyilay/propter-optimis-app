@@ -34,7 +34,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'apps.core',
-    'apps.authentication',
+    # 'apps.authentication',  # Removed - using Supabase auth only
     'apps.videos',
     'apps.analytics',
     'apps.exports',
@@ -129,8 +129,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom User Model
-AUTH_USER_MODEL = 'authentication.User'
+# Removed custom User model - using Supabase auth.users directly
 
 # Django REST Framework
 REST_FRAMEWORK = {

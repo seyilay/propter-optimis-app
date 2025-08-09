@@ -15,7 +15,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from apps.core.models import TimestampedModel, VideoStatus, AnalysisIntent
-from apps.authentication.models import User
+# Removed User import - using Supabase auth.users directly
 import uuid
 
 
@@ -23,12 +23,7 @@ class Video(models.Model):
     """Video model that maps to Supabase videos table."""
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='videos',
-        db_column='user_id'  # Map to Supabase column name
-    )
+    user_id = models.UUIDField()  # Direct reference to Supabase auth.users.id
     filename = models.CharField(max_length=500)
     title = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -68,7 +63,7 @@ class Video(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.filename} - {self.user.email}"
+        return f"{self.filename} - User {self.user_id}"
     
     @property
     def is_processed(self):
@@ -83,12 +78,8 @@ class Video(models.Model):
                 self.analysis_intent)
     
     def calculate_processing_priority(self):
-        """Calculate processing priority based on user tier and intent."""
-        if self.user.subscription_tier == 'enterprise':
-            return 'enterprise'
-        elif self.analysis_intent == 'opposition_scouting':
-            return 'high'
-        elif self.user.subscription_tier == 'pro':
+        """Calculate processing priority based on intent."""
+        if self.analysis_intent == 'opposition_scouting':
             return 'high'
         return 'standard'
     
