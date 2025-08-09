@@ -134,9 +134,12 @@ class SupabaseStorageClient:
             # Reset file pointer to beginning
             file.seek(0)
             
+            # Read file contents as bytes
+            file_contents = file.read()
+            
             # Upload to Supabase Storage
             response = self.client.storage.from_(self.bucket_name).upload(
-                file=file,
+                file=file_contents,
                 path=file_path,
                 file_options={"cache-control": "3600", "upsert": "false"}
             )
