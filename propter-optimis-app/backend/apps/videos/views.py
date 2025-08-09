@@ -51,15 +51,11 @@ class VideoListCreateView(generics.ListCreateAPIView):
         if settings.DEBUG:
             # Local development - show all videos for test user
             test_user_id = "550e8400-e29b-41d4-a716-446655440000"
-            return Video.objects.filter(user_id=test_user_id).select_related(
-                'metadata', 'upload_session'
-            )
+            return Video.objects.filter(user_id=test_user_id)
         else:
             # Production - TODO: Extract user_id from Supabase token
             user_id = "550e8400-e29b-41d4-a716-446655440000"  # Placeholder
-            return Video.objects.filter(user_id=user_id).select_related(
-                'metadata', 'upload_session'
-            )
+            return Video.objects.filter(user_id=user_id)
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
