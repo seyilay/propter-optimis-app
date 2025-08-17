@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 import os
 from django.conf import settings
 
+path('api/analytics/', include('apps.analytics.urls')),
 
 class OpenStarLabConfig:
     """Configuration class for OpenStarLab intelligence processing."""
